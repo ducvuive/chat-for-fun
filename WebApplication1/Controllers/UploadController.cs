@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -22,24 +22,32 @@ namespace WebApplication1.Controllers
     public class UploadController : ControllerBase
     {
         private readonly int FileSizeLimit;
+        private readonly AzureOptions _azureOptions;
         private readonly string[] AllowedExtensions;
         private readonly ManageAppDbContext _context;
         private readonly IMapper _mapper;
         private readonly IWebHostEnvironment _environment;
         private readonly IHubContext<ChatHub> _hubContext;
+        private readonly string linkContainer;
         public UploadController(ManageAppDbContext context,
             IMapper mapper,
             IWebHostEnvironment environment,
            IHubContext<ChatHub> hubContext,
-            IConfiguration configruation)
+            IConfiguration configruation,
+            IOptions<AzureOptions> azureOptions)
         {
             _context = context;
             _mapper = mapper;
             _environment = environment;
             _hubContext = hubContext;
 
+            _azureOptions = new AzureOptions();
+            configruation.GetSection("Azure").Bind(_azureOptions);
+
             FileSizeLimit = configruation.GetSection("FileUpload").GetValue<int>("FileSizeLimit");
             AllowedExtensions = configruation.GetSection("FileUpload").GetValue<string>("AllowedExtensions").Split(",");
+            linkContainer = configruation.GetSection("BlobURL").Value;
+            _azureOptions.ConnectionString = configruation.GetSection("ConnectionString").Value;
         }
 
 
@@ -55,25 +63,47 @@ namespace WebApplication1.Controllers
                 }
 
                 var fileName = DateTime.Now.ToString("yyyymmddMMss") + "_" + Path.GetFileName(uploadViewModel.File.FileName);
-                var folderPath = Path.Combine(_environment.WebRootPath, "uploads");
-                var filePath = Path.Combine(folderPath, fileName);
-                if (!Directory.Exists(folderPath))
-                    Directory.CreateDirectory(folderPath);
+                System.Diagnostics.Debug.WriteLine("This is a comment.");
 
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                //var folderPath = Path.Combine(_environment.WebRootPath, "uploads");
+                /*var filePath = Path.Combine(folderPath, fileName);
+                if (!Directory.Exists(folderPath))
+                    Directory.CreateDirectory(folderPath);*/
+
+                /*using (var fileStream = new FileStream(filePath, FileMode.Create))
                 {
                     await uploadViewModel.File.CopyToAsync(fileStream);
-                }
+                }*/
+
+                using MemoryStream fileUpLoadStream = new MemoryStream();
+                uploadViewModel.File.CopyTo(fileUpLoadStream);
+                fileUpLoadStream.Position = 0;
+                BlobContainerClient blobContainerClient = new BlobContainerClient(
+                    _azureOptions.ConnectionString,
+                    _azureOptions.Container
+                    );
+                BlobClient blobClient = blobContainerClient.GetBlobClient(fileName);
+                blobClient.Upload(fileUpLoadStream, new BlobUploadOptions()
+                {
+                    HttpHeaders = new BlobHttpHeaders
+                    {
+                        ContentType = "image/png"
+                    }
+                }, cancellationToken: default);
 
                 var user = _context.Users.Where(u => u.UserName == User.Identity.Name).FirstOrDefault();
                 var room = _context.Rooms.Where(r => r.Id == uploadViewModel.RoomId).FirstOrDefault();
                 if (user == null || room == null)
                     return NotFound();
 
-                string htmlImage = string.Format(
+                /*string htmlImage = string.Format(
                     "<a href=\"/uploads/{0}\" target=\"_blank\">" +
                     "<img src=\"/uploads/{0}\" class=\"post-image\">" +
-                    "</a>", fileName);
+                    "</a>", fileName);*/
+                string htmlImage = string.Format(
+                    "<a href=\"{1}/{0}\" target=\"_blank\">" +
+                    "<img src=\"{1}/{0}\" class=\"post-image\">" +
+                    "</a>", fileName, linkContainer);
 
                 var message = new Message()
                 {
