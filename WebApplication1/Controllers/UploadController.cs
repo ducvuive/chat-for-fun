@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +16,7 @@ using WebApplication1.Data;
 using WebApplication1.Data.Entities;
 using WebApplication1.Hubs;
 using WebApplication1.Models;
+using WebApplication1.Options;
 
 namespace WebApplication1.Controllers
 {
