@@ -1,10 +1,7 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -58,29 +55,39 @@ namespace WebApplication1.Controllers
         [HttpPost]
         public async Task<ActionResult<Room>> Create(RoomViewModel roomViewModel)
         {
-            if (_context.Rooms.Any(r => r.Name == roomViewModel.Name))
-                return BadRequest("Invalid room name or room already exists");
-
-            var user = _context.Users.FirstOrDefault(u => u.UserName == User.Identity.Name);
-            var room = new Room()
+            if (ModelState.IsValid)
             {
-                Name = roomViewModel.Name,
-                Admin = user
-            };
+                if (_context.Rooms.Any(r => r.Name == roomViewModel.Name))
+                {
+                    await _hubContext.Clients.All.SendAsync("onError", "Invalid room name or room already exists");
+                    return BadRequest();
+                }
 
-            _context.Rooms.Add(room);
-            await _context.SaveChangesAsync();
+                var user = _context.Users.FirstOrDefault(u => u.UserName == User.Identity.Name);
+                var room = new Room()
+                {
+                    Name = roomViewModel.Name,
+                    Admin = user
+                };
 
-            await _hubContext.Clients.All.SendAsync("addChatRoom", new { id = room.Id, name = room.Name });
+                _context.Rooms.Add(room);
+                await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Get), new { id = room.Id }, new { id = room.Id, name = room.Name });
+                await _hubContext.Clients.All.SendAsync("addChatRoom", new { id = room.Id, name = room.Name });
+
+                return CreatedAtAction(nameof(Get), new { id = room.Id }, new { id = room.Id, name = room.Name });
+            }
+            return BadRequest();
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Edit(int id, RoomViewModel roomViewModel)
         {
             if (_context.Rooms.Any(r => r.Name == roomViewModel.Name))
-                return BadRequest("Invalid room name or room already exists");
+            {
+                await _hubContext.Clients.All.SendAsync("onError", "Invalid room name or room already exists");
+                return BadRequest();
+            }
 
             var room = await _context.Rooms
                 .Include(r => r.Admin)
@@ -88,7 +95,10 @@ namespace WebApplication1.Controllers
                 .FirstOrDefaultAsync();
 
             if (room == null)
+            {
+                await _hubContext.Clients.All.SendAsync("onError", "Just user create this chat can edit infomation !!!");
                 return NotFound();
+            }
 
             room.Name = roomViewModel.Name;
             await _context.SaveChangesAsync();
@@ -107,7 +117,10 @@ namespace WebApplication1.Controllers
                 .FirstOrDefaultAsync();
 
             if (room == null)
+            {
+                await _hubContext.Clients.All.SendAsync("onError", "Just user create this chat can delete !!!");
                 return NotFound();
+            }
 
             _context.Rooms.Remove(room);
             await _context.SaveChangesAsync();

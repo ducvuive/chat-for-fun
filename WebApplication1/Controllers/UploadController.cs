@@ -62,7 +62,8 @@ namespace WebApplication1.Controllers
             {
                 if (!Validate(uploadViewModel.File))
                 {
-                    return BadRequest("Validation failed!");
+                    await _hubContext.Clients.All.SendAsync("onError", "Please only send images and the default size is 512KB !!!");
+                    return Ok();
                 }
 
                 var fileName = DateTime.Now.ToString("yyyymmddMMss") + "_" + Path.GetFileName(uploadViewModel.File.FileName);

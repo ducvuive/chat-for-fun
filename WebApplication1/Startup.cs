@@ -115,8 +115,8 @@ namespace WebApplication1
                     {
                         Implicit = new OpenApiOAuthFlow
                         {
-                            AuthorizationUrl = new Uri(Configuration["AuthorityUrl"] + "/connect/authorize"),
-                            Scopes = new Dictionary<string, string> { { "api.WebApp", "WebApp API" } }
+                            //AuthorizationUrl = new Uri(Configuration["AuthorityUrl"] + "/connect/authorize"),
+                            //Scopes = new Dictionary<string, string> { { "api.WebApp", "WebApp API" } }
                         },
                     },
                 });
@@ -157,7 +157,7 @@ namespace WebApplication1
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseIdentityServer();
-
+            app.UseStatusCodePages();
             app.UseAuthentication();
 
             app.UseRouting();

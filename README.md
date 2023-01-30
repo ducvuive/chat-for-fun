@@ -1,9 +1,11 @@
 # Chat-for-fun
 ## ⚓ Features
 * Login, register.
-* Create new group.
-* View list members online in group.
+* Create new group chat.
+* Delete and edit information group.(just user create this group can do it).
+* View list members online in each group chat.
 * Use loadmore message in each group.
+* Send messages and images.
 ## ⚓ Tech stacks
 ### Back-end
 * ASP.NET Core 

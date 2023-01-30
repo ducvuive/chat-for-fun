@@ -21,10 +21,7 @@
                     <div class="divider d-flex align-items-center my-4">
                         <p class="text-center fs-4 fw-bold mx-3 mb-0">Log in</p>
                     </div>
-                    @if (error != null)
-                    {
-                        <p class="text-danger">@error</p>
-                    }
+                    <div asp-validation-summary="All" class="text-danger"></div>
                     <!-- Email input -->
                     <div class="form-outline mb-4 form-group">
                         <label asp-for="Input.UserName"></label>
