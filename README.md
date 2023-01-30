@@ -17,5 +17,6 @@
 * Javascript
 * KnockoutJS
 ### Link demo: <a href="https://chat-app-ducvuive2.azurewebsites.net/" target="_blank">Chat for fun</a>
+![](./WebApplication1/wwwroot/images_info/ScreenPage.png) 
 * username: admin1 
 * password: Admin1@
