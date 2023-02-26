@@ -87,7 +87,8 @@ namespace WebApplication1.Controllers
             var createdMessage = _mapper.Map<Message, MessageViewModel>(msg);
             await _hubContext.Clients.Group(room.Name).SendAsync("newMessage", createdMessage);
 
-            return CreatedAtAction(nameof(Get), new { id = msg.Id }, createdMessage);
+            //return CreatedAtAction(nameof(Get), new { id = msg.Id }, createdMessage);
+            return Ok();
         }
 
 

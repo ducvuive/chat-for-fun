@@ -5,6 +5,7 @@
         console.log('SignalR Started...')
         viewModel.roomList();
         viewModel.userList();
+        viewModel.roomChatGPT();
     }).catch(function (err) {
         return console.error(err);
     });
@@ -74,8 +75,10 @@
         self.chatUsers = ko.observableArray([]);// user chat trong 1 room
         self.chatMessages = ko.observableArray([]);
         self.joinedRoom = ko.observable("");// ten room dang join la room nao
+        self.joinedRoomChatGPT = ko.observable("");// room AI
         self.joinedRoomId = ko.observable("");
         self.serverInfoMessage = ko.observable("");
+        self.chatGPT = ko.observable(false);
         self.myName = ko.observable("");
         self.myAvatar = ko.observable("avatar1.png");
         self.countShowMessageMore = ko.observable(1);
@@ -102,20 +105,24 @@
                 });
             }
         });
-
+ 
         // send message
         self.sendNewMessage = function () {
-            var text = self.message();
-            //send private
-            if (text.startsWith("/")) {
-                var receiver = text.substring(text.indexOf("(") + 1, text.indexOf(")"));
-                var message = text.substring(text.indexOf(")") + 1, text.length);
-                self.sendPrivate(receiver, message);
-            }
-            else {
-                self.sendToRoom(self.joinedRoom(), self.message());
-            }
 
+            var text = self.message();
+                //send private
+                if (text.startsWith("/")) {
+                    var receiver = text.substring(text.indexOf("(") + 1, text.indexOf(")"));
+                    var message = text.substring(text.indexOf(")") + 1, text.length);
+                    self.sendPrivate(receiver, message);
+                }
+                else {
+                    self.sendToRoom(self.joinedRoom(), self.message());
+                    // neu la room chatbot thi AI se tra loi lai
+                    if (self.chatGPT() === true) {
+                        self.replyByAI(self.joinedRoom(), self.message());
+                    }
+                 }
             self.message("");
         }
 
@@ -128,6 +135,16 @@
                 });
             }
         }
+        // send to AI 
+        self.replyByAI = function (roomName, message) {
+            if (roomName.length > 0 && message.length > 0) {
+                 fetch('/CreateMessageAI', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ room: roomName, content: message })
+                 });
+            }
+        }
         // call 1 method của hub từ client
         self.sendPrivate = function (receiver, message) {
             if (receiver.length > 0 && message.length > 0) {
@@ -135,14 +152,20 @@
             }
         }
 
+        //join room
         self.joinRoom = function (room) {
             connection.invoke("Join", room.name()).then(function () {
-                self.joinedRoom(room.name());
-                self.joinedRoomId(room.id());
-                self.userList();
-                self.messageHistory();
+                    self.joinedRoom(room.name());
+                    self.joinedRoomId(room.id());
+                    self.userList();
+                    self.messageHistory();
+                    if (room.name() == "ChatGPT") {
+                        self.chatGPT(true);
+                    }
+                    else self.chatGPT(false);
             });
         }
+     
         // load rooms
         self.roomList = function () {
             fetch('/api/Rooms')
@@ -150,11 +173,20 @@
                 .then(data => {
                     self.chatRooms.removeAll();
                     for (var i = 0; i < data.length; i++) {
+                        if (data[i].name == "ChatGPT") continue;
                         self.chatRooms.push(new ChatRoom(data[i].id, data[i].name));
                     }
 
                     if (self.chatRooms().length > 0)
                         self.joinRoom(self.chatRooms()[0]);
+                });
+        }
+        // load room chat GPT
+        self.roomChatGPT = function () {
+            fetch('/GetRoomChatGPT')
+                .then(response => response.json())
+                .then(data => {
+                    self.joinedRoomChatGPT(new ChatRoom(data.id, data.name));
                 });
         }
 
@@ -317,5 +349,5 @@
     }
 
     var viewModel = new AppViewModel();
-    ko.applyBindings(viewModel);
+    //ko.applyBindings(new ViewModel('@Html.Raw(viewModel)'));
 });
